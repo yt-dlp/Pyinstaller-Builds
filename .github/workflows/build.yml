@@ -1,0 +1,53 @@
+name: Build
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build package
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        include:
+          - { sys: mingw64, arch: 64bit, env: x86_64 }
+          - { sys: mingw32, arch: 32bit, env: i686 }
+    
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Set up MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          msystem: ${{matrix.sys}}
+          install: >-
+            base-devel
+            mingw-w64-${{matrix.env}}-toolchain
+            mingw-w64-${{matrix.env}}-python
+            mingw-w64-${{matrix.env}}-python-pip
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: pyinstaller/pyinstaller
+          ref: v4.5.1
+
+      - name: Build bootloader
+        run: |
+          cd bootloader
+          python waf distclean all --target-arch=${{matrix.arch}} --gcc
+
+      - name: Build packages
+        run: |
+          python -m pip install wheel
+          python setup.py sdist bdist_wheel
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: ${{matrix.env}}
