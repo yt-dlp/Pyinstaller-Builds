@@ -1,5 +1,7 @@
 name: Build
 on:
+  schedule:
+    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 jobs:
@@ -51,3 +53,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           destination_dir: ${{matrix.env}}
+          keep_files: true
