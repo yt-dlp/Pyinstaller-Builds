@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: pyinstaller/pyinstaller
-          ref: v4.9
+          ref: v4.10
 
       - name: Build bootloader
         run: |
