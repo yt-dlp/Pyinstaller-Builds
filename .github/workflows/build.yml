@@ -13,7 +13,7 @@ jobs:
       matrix:
         include:
           - { sys: mingw64, arch: 64bit, env: x86_64 }
-          - { sys: mingw64, arch: 64bit, env: arm64 }
+          - { sys: mingw64, arch: 32bit, env: i686 }
     
     defaults:
       run:
