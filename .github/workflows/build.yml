@@ -17,6 +17,9 @@ jobs:
       run:
         shell: msys2 {0}
 
+    concurrency:
+       group: ${{ github.workflow }}-${{ github.ref }}
+
     steps:
       - name: Set up MinGW
         uses: msys2/setup-msys2@v2
@@ -30,7 +33,7 @@ jobs:
             mingw-w64-${{matrix.env}}-python-pip
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: pyinstaller/pyinstaller
           ref: v6.13.0
@@ -46,7 +49,7 @@ jobs:
           python setup.py sdist bdist_wheel
 
       - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
