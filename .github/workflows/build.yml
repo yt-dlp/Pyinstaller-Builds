@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Set up MinGW
-        uses: msys2/setup-msys2@v2
+        uses: yt-dlp/setup-msys2@v2
         with:
           update: true
           msystem: ${{matrix.sys}}
@@ -49,7 +49,7 @@ jobs:
           python setup.py sdist bdist_wheel
 
       - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
+        uses: yt-dlp/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
