@@ -5,13 +5,14 @@ on:
 jobs:
   build:
     name: Build package
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runner }}
 
     strategy:
       matrix:
         include:
-          - { sys: mingw64, arch: 64bit, env: x86_64 }
-          - { sys: mingw32, arch: 32bit, env: i686 }
+          - { runner: windows-11, sys: MINGW64, arch: 64bit, env: x86_64, compiler: gcc }
+          - { runner: windows-11, sys: MINGW32, arch: 32bit, env: i686, compiler: gcc }
+          - { runner: windows-11-arm, sys: CLANGARM64, arch: 64bit-arm, env: clang-aarch64, compiler: clang }
     
     defaults:
       run:
@@ -25,23 +26,23 @@ jobs:
         uses: yt-dlp/setup-msys2@v2
         with:
           update: true
-          msystem: ${{matrix.sys}}
+          msystem: ${{ matrix.sys }}
           install: >-
             base-devel
-            mingw-w64-${{matrix.env}}-toolchain
-            mingw-w64-${{matrix.env}}-python
-            mingw-w64-${{matrix.env}}-python-pip
+            mingw-w64-${{ matrix.env }}-toolchain
+            mingw-w64-${{ matrix.env }}-python
+            mingw-w64-${{ matrix.env }}-python-pip
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
           repository: pyinstaller/pyinstaller
-          ref: v6.13.0
+          ref: v6.15.0
 
       - name: Build bootloader
         run: |
           cd bootloader
-          python waf distclean all --target-arch=${{matrix.arch}} --gcc
+          python waf distclean all --target-arch=${{ matrix.arch }} --${{ compiler }}
 
       - name: Build packages
         run: |
@@ -53,5 +54,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
-          destination_dir: ${{matrix.env}}
+          destination_dir: ${{ (matrix.env == 'clang-aarch64' && 'arm64') || matrix.env }}
           keep_files: true
