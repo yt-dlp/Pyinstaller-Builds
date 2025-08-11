@@ -10,8 +10,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - { runner: windows-11, sys: MINGW64, arch: 64bit, env: x86_64, compiler: gcc }
-          - { runner: windows-11, sys: MINGW32, arch: 32bit, env: i686, compiler: gcc }
+          - { runner: windows-latest, sys: MINGW64, arch: 64bit, env: x86_64, compiler: gcc }
+          - { runner: windows-latest, sys: MINGW32, arch: 32bit, env: i686, compiler: gcc }
           - { runner: windows-11-arm, sys: CLANGARM64, arch: 64bit-arm, env: clang-aarch64, compiler: clang }
     
     defaults:
