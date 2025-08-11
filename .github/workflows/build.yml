@@ -42,7 +42,7 @@ jobs:
       - name: Build bootloader
         run: |
           cd bootloader
-          python waf distclean all --target-arch=${{ matrix.arch }} --${{ compiler }}
+          python waf distclean all --target-arch=${{ matrix.arch }} --${{ matrix.compiler }}
 
       - name: Build packages
         run: |
