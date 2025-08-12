@@ -1,57 +1,36 @@
-name: Build
+name: Build all packages
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: PyInstaller tag/ref
+        required: true
+        default: v6.15.0
+        type: string
 
 jobs:
-  build:
-    name: Build package
-    runs-on: windows-latest
+  build_x64:
+    uses: ./.github/workflows/build-package.yml
+    with:
+      ref: ${{ inputs.ref }}
+      architecture: 'x64'
+    permissions:
+      contents: write
 
-    strategy:
-      matrix:
-        include:
-          - { sys: mingw64, arch: 64bit, env: x86_64 }
-          - { sys: mingw32, arch: 32bit, env: i686 }
-    
-    defaults:
-      run:
-        shell: msys2 {0}
+  build_x86:
+    needs: build_x64
+    uses: ./.github/workflows/build-package.yml
+    with:
+      ref: ${{ inputs.ref }}
+      architecture: 'x86'
+    permissions:
+      contents: write
 
-    concurrency:
-       group: ${{ github.workflow }}-${{ github.ref }}
-
-    steps:
-      - name: Set up MinGW
-        uses: yt-dlp/setup-msys2@v2
-        with:
-          update: true
-          msystem: ${{matrix.sys}}
-          install: >-
-            base-devel
-            mingw-w64-${{matrix.env}}-toolchain
-            mingw-w64-${{matrix.env}}-python
-            mingw-w64-${{matrix.env}}-python-pip
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          repository: pyinstaller/pyinstaller
-          ref: v6.13.0
-
-      - name: Build bootloader
-        run: |
-          cd bootloader
-          python waf distclean all --target-arch=${{matrix.arch}} --gcc
-
-      - name: Build packages
-        run: |
-          python -m pip install wheel
-          python setup.py sdist bdist_wheel
-
-      - name: Deploy
-        uses: yt-dlp/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          destination_dir: ${{matrix.env}}
-          keep_files: true
+  build_arm64:
+    needs: build_x86
+    uses: ./.github/workflows/build-package.yml
+    with:
+      ref: ${{ inputs.ref }}
+      architecture: 'arm64'
+    permissions:
+      contents: write

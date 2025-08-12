@@ -1,0 +1,114 @@
+name: Build package
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      architecture:
+        required: true
+        type: string
+
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: PyInstaller tag/ref
+        required: true
+        type: string
+      architecture:
+        description: Architecture
+        required: true
+        type: choice
+        options:
+        - 'x64'
+        - 'x86'
+        - 'arm64'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.process_inputs.outputs.runner }}
+      sys: ${{ steps.process_inputs.outputs.sys }}
+      arch: ${{ steps.process_inputs.outputs.arch }}
+      env: ${{ steps.process_inputs.outputs.env }}
+      compiler: ${{ steps.process_inputs.outputs.compiler }}
+    steps:
+      - name: Process inputs
+        id: process_inputs
+        env:
+          ARCHITECTURE: ${{ inputs.architecture }}
+        shell: python
+        run: |
+          import json
+          import os
+          outputs = {
+              'x64': {
+                  'runner': 'windows-2025',
+                  'sys': 'MINGW64',
+                  'arch': '64bit',
+                  'env': 'x86_64',
+                  'compiler': 'gcc',
+              },
+              'x86': {
+                  'runner': 'windows-2025',
+                  'sys': 'MINGW32',
+                  'arch': '32bit',
+                  'env': 'i686',
+                  'compiler': 'gcc',
+              },
+              'arm64': {
+                  'runner': 'windows-11-arm',
+                  'sys': 'CLANGARM64',
+                  'arch': '64bit-arm',
+                  'env': 'clang-aarch64',
+                  'compiler': 'clang',
+              },
+          }[os.environ['ARCHITECTURE']]
+          print(json.dumps(outputs, indent=2))
+          with open(os.environ['GITHUB_OUTPUT'], 'at') as f:
+              f.write('\n'.join(f'{key}={value}' for key, value in outputs.items()))
+
+  build:
+    name: Build ${{ inputs.architecture }} package
+    needs: prepare
+    runs-on: ${{ needs.prepare.outputs.runner }}
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Set up MinGW
+        uses: yt-dlp/setup-msys2@v2
+        with:
+          update: true
+          msystem: ${{ needs.prepare.outputs.sys }}
+          install: >-
+            base-devel
+            mingw-w64-${{ needs.prepare.outputs.env }}-toolchain
+            mingw-w64-${{ needs.prepare.outputs.env }}-python
+            mingw-w64-${{ needs.prepare.outputs.env }}-python-pip
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: pyinstaller/pyinstaller
+          ref: ${{ inputs.ref }}
+
+      - name: Build bootloader
+        run: |
+          cd bootloader
+          python waf distclean all --target-arch=${{ needs.prepare.outputs.arch }} --${{ needs.prepare.outputs.compiler }}
+
+      - name: Build package
+        run: |
+          python -m pip install wheel
+          python setup.py sdist bdist_wheel
+
+      - name: Deploy
+        uses: yt-dlp/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: ${{ inputs.architecture }}
+          keep_files: true
