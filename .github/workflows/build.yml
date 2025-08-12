@@ -1,6 +1,7 @@
 name: Build all packages
 on:
   workflow_dispatch:
+    inputs:
       ref:
         description: PyInstaller tag/ref
         required: true
