@@ -6,9 +6,7 @@ on:
         required: true
         default: v6.15.0
         type: string
-        - x64
-        - x86
-        - arm64
+
 jobs:
   build_x64:
     uses: ./.github/workflows/build-package.yml
