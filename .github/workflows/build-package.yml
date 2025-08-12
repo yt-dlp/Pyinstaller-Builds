@@ -20,9 +20,9 @@ on:
         required: true
         type: choice
         options:
-        - x64
-        - x86
-        - arm64
+        - 'x64'
+        - 'x86'
+        - 'arm64'
 
 jobs:
   prepare:
@@ -100,7 +100,7 @@ jobs:
           cd bootloader
           python waf distclean all --target-arch=${{ needs.prepare.outputs.arch }} --${{ needs.prepare.outputs.compiler }}
 
-      - name: Build packages
+      - name: Build package
         run: |
           python -m pip install wheel
           python setup.py sdist bdist_wheel
