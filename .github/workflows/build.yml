@@ -13,7 +13,7 @@ jobs:
     uses: ./.github/workflows/build-package.yml
     with:
       ref: ${{ inputs.ref }}
-      architecture: x64
+      architecture: 'x64'
     permissions:
       contents: write
 
@@ -22,7 +22,7 @@ jobs:
     uses: ./.github/workflows/build-package.yml
     with:
       ref: ${{ inputs.ref }}
-      architecture: x86
+      architecture: 'x86'
     permissions:
       contents: write
 
@@ -31,6 +31,6 @@ jobs:
     uses: ./.github/workflows/build-package.yml
     with:
       ref: ${{ inputs.ref }}
-      architecture: arm64
+      architecture: 'arm64'
     permissions:
       contents: write
