@@ -5,6 +5,7 @@ on:
       ref:
         description: PyInstaller tag/ref
         required: true
+        default: v6.15.0
         type: string
       x64:
         description: Build Windows x64 / win_amd64
