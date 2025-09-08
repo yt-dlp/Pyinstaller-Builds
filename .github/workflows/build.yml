@@ -19,10 +19,6 @@ on:
         description: Build Windows ARM64 / win_arm64
         default: true
         type: boolean
-      dry_run:
-        description: Dry run
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -187,20 +183,9 @@ jobs:
           pattern: pyinstaller-*
           merge-multiple: true
 
-      - name: Publish release (dry run)
-        if: ${{ fromJSON(inputs.dry_run) }}
-        run: |
-          echo gh release create \
-            --notes "${RELEASE_NOTES}" \
-            --target "${HEAD_SHA}" \
-            --title "${RELEASE_TITLE}" \
-            "${RELEASE_TAG}" \
-            artifact/*
-
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        if: ${{ !fromJSON(inputs.dry_run) }}
         run: |
           gh release create \
             --notes "${RELEASE_NOTES}" \
