@@ -1,4 +1,4 @@
-name: Build all packages
+name: Build
 on:
   workflow_dispatch:
     inputs:
@@ -7,30 +7,189 @@ on:
         required: true
         default: v6.15.0
         type: string
+      x64:
+        description: Build Windows x64 / win_amd64
+        default: true
+        type: boolean
+      x86:
+        description: Build Windows x86 / win32
+        default: true
+        type: boolean
+      arm64:
+        description: Build Windows ARM64 / win_arm64
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
 
 jobs:
-  build_x64:
-    uses: ./.github/workflows/build-package.yml
-    with:
-      ref: ${{ inputs.ref }}
-      architecture: 'x64'
-    permissions:
-      contents: write
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      head_sha: ${{ steps.get_target.outputs.head_sha }}
+      matrix: ${{ steps.build_matrix.outputs.matrix }}
+      release_title: ${{ steps.release_info.outputs.release_title }}
+      release_tag: ${{ steps.release_info.outputs.release_tag }}
+      release_notes: ${{ steps.release_info.outputs.release_notes }}
 
-  build_x86:
-    needs: build_x64
-    uses: ./.github/workflows/build-package.yml
-    with:
-      ref: ${{ inputs.ref }}
-      architecture: 'x86'
-    permissions:
-      contents: write
+    steps:
+      - uses: actions/checkout@v4
 
-  build_arm64:
-    needs: build_x86
-    uses: ./.github/workflows/build-package.yml
-    with:
-      ref: ${{ inputs.ref }}
-      architecture: 'arm64'
+      - name: Get target commitish
+        id: get_target
+        run: |
+          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build matrix
+        id: build_matrix
+        env:
+          INPUTS: ${{ toJSON(inputs) }}
+        shell: python
+        run: |
+          import json
+          import os
+          ARCHITECTURES = [{
+              'name': 'x64',
+              'runner': 'windows-2025',
+              'sys': 'MINGW64',
+              'env': 'x86_64',
+              'arch': '64bit',
+              'compiler': 'gcc',
+              'wheel_tag': 'win_amd64',
+              'platform': 'Windows-64bit-intel',
+          }, {
+              'name': 'x86',
+              'runner': 'windows-2025',
+              'sys': 'MINGW32',
+              'env': 'i686',
+              'arch': '32bit',
+              'compiler': 'gcc',
+              'wheel_tag': 'win32',
+              'platform': 'Windows-32bit-intel',
+          }, {
+              'name': 'arm64',
+              'runner': 'windows-11-arm',
+              'sys': 'CLANGARM64',
+              'env': 'clang-aarch64',
+              'arch': '64bit-arm',
+              'compiler': 'clang',
+              'wheel_tag': 'win_arm64',
+              'platform': 'Windows-64bit-arm',
+          }]
+          INPUTS = json.loads(os.environ['INPUTS'])
+          matrix = [arch for arch in ARCHITECTURES for k, v in INPUTS.items() if arch['name'] == k and v]
+          print(json.dumps(matrix, indent=2))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'matrix={json.dumps(matrix)}')
+
+      - name: Generate release info
+        id: release_info
+        env:
+          REF: ${{ inputs.ref }}
+          MATRIX: ${{ steps.build_matrix.outputs.matrix }}
+        shell: python
+        run: |
+          import datetime as dt
+          import json
+          import os
+          ref = os.environ['REF']
+          builds = ', '.join(element['name'] for element in json.loads(os.environ['MATRIX']))
+          timestamp = dt.datetime.now(tz=dt.timezone.utc).strftime('%Y.%m.%d.%H%M%S')
+          outputs = {
+            'release_title': f'{ref} @ {timestamp}',
+            'release_tag': timestamp,
+            'release_notes': f'PyInstaller {ref} builds for Windows {builds}',
+          }
+          print(json.dumps(outputs, indent=2))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('\n'.join(f'{key}={value}' for key, value in outputs.items()))
+
+  build:
+    name: Build ${{ matrix.name }} package
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Set up MinGW
+        uses: yt-dlp/setup-msys2@v2
+        with:
+          update: true
+          msystem: ${{ matrix.sys }}
+          install: >-
+            base-devel
+            mingw-w64-${{ matrix.env }}-toolchain
+            mingw-w64-${{ matrix.env }}-python
+            mingw-w64-${{ matrix.env }}-python-pip
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: pyinstaller/pyinstaller
+          ref: ${{ inputs.ref }}
+
+      - name: Build bootloader
+        env:
+          ARCH: ${{ matrix.arch }}
+          COMPILER: ${{ matrix.compiler }}
+        run: |
+          cd bootloader
+          python ./waf --target-arch="${ARCH}" --"${COMPILER}" distclean all
+
+      - name: Build package
+        env:
+          PYI_WHEEL_TAG: ${{ matrix.wheel_tag }}
+          PYI_PLATFORM: ${{ matrix.platform }}
+        run: |
+          python -m pip install build
+          python -m build --no-isolation --wheel --outdir=dist .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyinstaller-${{ inputs.ref }}-${{ matrix.name }}
+          path: |
+            dist/*
+          compression-level: 0
+
+  release:
+    name: Release
+    needs: [prepare, build]
     permissions:
       contents: write
+    runs-on: ubuntu-latest
+    env:
+      HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
+      RELEASE_TITLE: ${{ needs.prepare.outputs.release_title }}
+      RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+      RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifact
+          pattern: pyinstaller-*
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create \
+            --notes "${RELEASE_NOTES}" \
+            --target "${HEAD_SHA}" \
+            --title "${RELEASE_TITLE}" \
+            "${RELEASE_TAG}" \
+            artifact/*
