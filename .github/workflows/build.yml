@@ -36,12 +36,15 @@ jobs:
       release_title: ${{ steps.release_info.outputs.release_title }}
       release_tag: ${{ steps.release_info.outputs.release_tag }}
       release_notes: ${{ steps.release_info.outputs.release_notes }}
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Get target commitish
         id: get_target
         run: |
           echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Build matrix
         id: build_matrix
         env:
@@ -83,6 +86,7 @@ jobs:
           print(json.dumps(matrix, indent=2))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'matrix={json.dumps(matrix)}')
+
       - name: Generate release info
         id: release_info
         env:
@@ -109,8 +113,6 @@ jobs:
     name: Build ${{ matrix.name }} package
     needs: prepare
     runs-on: ${{ matrix.runner }}
-    permissions:
-      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -172,15 +174,18 @@ jobs:
       RELEASE_TITLE: ${{ needs.prepare.outputs.release_title }}
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: artifact
           pattern: pyinstaller-*
           merge-multiple: true
+
       - name: Publish release (dry run)
         if: ${{ fromJSON(inputs.dry_run) }}
         run: |
@@ -190,6 +195,7 @@ jobs:
             --title "${RELEASE_TITLE}" \
             "${RELEASE_TAG}" \
             artifact/*
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
