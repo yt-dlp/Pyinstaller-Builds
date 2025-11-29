@@ -35,7 +35,7 @@ jobs:
       release_notes: ${{ steps.release_info.outputs.release_notes }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get target commitish
         id: get_target
@@ -131,7 +131,7 @@ jobs:
             mingw-w64-${{ matrix.env }}-python-pip
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: pyinstaller/pyinstaller
           ref: ${{ inputs.ref }}
@@ -173,7 +173,7 @@ jobs:
       RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
