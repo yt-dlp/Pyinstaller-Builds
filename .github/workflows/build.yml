@@ -20,28 +20,19 @@ on:
         default: true
         type: boolean
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   prepare:
     name: Prepare
     runs-on: ubuntu-latest
     outputs:
-      head_sha: ${{ steps.get_target.outputs.head_sha }}
       matrix: ${{ steps.build_matrix.outputs.matrix }}
       release_title: ${{ steps.release_info.outputs.release_title }}
       release_tag: ${{ steps.release_info.outputs.release_tag }}
       release_notes: ${{ steps.release_info.outputs.release_notes }}
 
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Get target commitish
-        id: get_target
-        run: |
-          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Build matrix
         id: build_matrix
         env:
@@ -108,7 +99,9 @@ jobs:
 
   build:
     name: Build ${{ matrix.name }} package
-    needs: prepare
+    needs: [prepare]
+    permissions:
+      contents: read
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -135,6 +128,7 @@ jobs:
         with:
           repository: pyinstaller/pyinstaller
           ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Build bootloader
         env:
@@ -153,7 +147,7 @@ jobs:
           python -m build --no-isolation --wheel --outdir=dist .
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pyinstaller-${{ inputs.ref }}-${{ matrix.name }}
           path: |
@@ -167,7 +161,6 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     env:
-      HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
       RELEASE_TITLE: ${{ needs.prepare.outputs.release_title }}
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
@@ -175,9 +168,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: artifact
           pattern: pyinstaller-*
@@ -189,7 +182,6 @@ jobs:
         run: |
           gh release create \
             --notes "${RELEASE_NOTES}" \
-            --target "${HEAD_SHA}" \
             --title "${RELEASE_TITLE}" \
             "${RELEASE_TAG}" \
             artifact/*
