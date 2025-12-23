@@ -5,7 +5,7 @@ on:
       ref:
         description: PyInstaller tag/ref
         required: true
-        default: v6.17.0
+        default: 3f596f66feebe3a7d247248f95f76c071d08b832  # v6.17.0
         type: string
       x64:
         description: Build Windows x64 / win_amd64
@@ -75,23 +75,50 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'matrix={json.dumps(matrix)}')
 
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          repository: pyinstaller/pyinstaller
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Git describe
+        id: git_describe
+        shell: bash
+        run: |
+          echo "tag=$(git describe --tags)" | tee -a "${GITHUB_OUTPUT}"
+
       - name: Generate release info
         id: release_info
         env:
           REF: ${{ inputs.ref }}
+          TAG: ${{ steps.git_describe.outputs.tag }}
           MATRIX: ${{ steps.build_matrix.outputs.matrix }}
         shell: python
         run: |
           import datetime as dt
           import json
           import os
+          import re
           ref = os.environ['REF']
-          builds = ', '.join(element['name'] for element in json.loads(os.environ['MATRIX']))
+          tag = os.environ['TAG']
           timestamp = dt.datetime.now(tz=dt.timezone.utc).strftime('%Y.%m.%d.%H%M%S')
+          builds = ', '.join(element['name'] for element in json.loads(os.environ['MATRIX']))
+          notes = ['PyInstaller']
+          if re.fullmatch(r'v\d+\.\d+\.\d+', tag):
+              notes.append(f'[{tag}](https://github.com/pyinstaller/pyinstaller/releases/tag/{tag})')
+          else:
+              notes.append(tag)
+          notes.append(f'builds for Windows {builds}')
+          if ref != tag:
+              if re.fullmatch(r'[\da-f]+', ref):
+                  notes.append(f'(from https://github.com/pyinstaller/pyinstaller/commit/{ref})')
+              else:
+                  notes.append('from {ref}')
           outputs = {
-            'release_title': f'{ref} @ {timestamp}',
+            'release_title': f'{tag} @ {timestamp}',
             'release_tag': timestamp,
-            'release_notes': f'PyInstaller {ref} builds for Windows {builds}',
+            'release_notes': ' '.join(notes),
           }
           print(json.dumps(outputs, indent=2))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
