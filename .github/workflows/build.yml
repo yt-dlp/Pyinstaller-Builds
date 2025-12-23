@@ -113,7 +113,7 @@ jobs:
 
     steps:
       - name: Set up MinGW
-        uses: yt-dlp/setup-msys2@v2
+        uses: yt-dlp/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda  # v2.30.0
         with:
           update: true
           msystem: ${{ matrix.sys }}
@@ -124,7 +124,7 @@ jobs:
             mingw-w64-${{ matrix.env }}-python-pip
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           repository: pyinstaller/pyinstaller
           ref: ${{ inputs.ref }}
@@ -147,7 +147,7 @@ jobs:
           python -m build --no-isolation --wheel --outdir=dist .
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
         with:
           name: pyinstaller-${{ inputs.ref }}-${{ matrix.name }}
           path: |
@@ -166,11 +166,11 @@ jobs:
       RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
         with:
           path: artifact
           pattern: pyinstaller-*
