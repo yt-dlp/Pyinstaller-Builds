@@ -202,7 +202,7 @@ jobs:
     name: Release
     needs: [prepare, build]
     permissions:
-      contents: write
+      contents: write  # Needed by gh to publish release to Github
     runs-on: ubuntu-latest
     env:
       RELEASE_TITLE: ${{ needs.prepare.outputs.release_title }}
