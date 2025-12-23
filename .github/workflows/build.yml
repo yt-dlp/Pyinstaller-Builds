@@ -124,6 +124,23 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write('\n'.join(f'{key}={value}' for key, value in outputs.items()))
 
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v6.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Build source distribution
+        run: |
+          python -m pip install -U build hatchling
+          python -m build --no-isolation --sdist --outdir=dist .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        with:
+          name: pyinstaller-${{ inputs.ref }}-sdist
+          path: |
+            dist/*
+          compression-level: 0
+
   build:
     name: Build ${{ matrix.name }} package
     needs: [prepare]
@@ -165,7 +182,7 @@ jobs:
           cd bootloader
           python ./waf --target-arch="${ARCH}" --"${COMPILER}" distclean all
 
-      - name: Build package
+      - name: Build wheel
         env:
           PYI_WHEEL_TAG: ${{ matrix.wheel_tag }}
           PYI_PLATFORM: ${{ matrix.platform }}
@@ -200,7 +217,7 @@ jobs:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
         with:
           path: artifact
-          pattern: pyinstaller-*
+          pattern: pyinstaller-${{ inputs.ref }}-*
           merge-multiple: true
 
       - name: Publish release
