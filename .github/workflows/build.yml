@@ -87,7 +87,8 @@ jobs:
         id: git_describe
         shell: bash
         run: |
-          echo "tag=$(git describe --tags)" | tee -a "${GITHUB_OUTPUT}"
+          git describe --tags  # So the script will exit on error
+          echo "tag=$(git describe --tags)" >> "${GITHUB_OUTPUT}"
 
       - name: Generate release info
         id: release_info
