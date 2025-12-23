@@ -1,4 +1,4 @@
-name: CI
+name: Lint and audit
 on:
   push:
     branches: [master]
@@ -24,7 +24,7 @@ env:
 
 jobs:
   actionlint:
-    name: Lint workflows
+    name: actionlint
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
           ./actionlint -color
 
   zizmor:
-    name: Audit workflows
+    name: zizmor
     permissions:
       contents: read
       actions: read  # Needed by zizmorcore/zizmor-action if repository is private
