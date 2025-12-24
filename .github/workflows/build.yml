@@ -104,8 +104,8 @@ jobs:
           import re
           ref = os.environ['REF']
           tag = os.environ['TAG']
-          timestamp = dt.datetime.now(tz=dt.timezone.utc).strftime('%Y.%m.%d.%H%M%S')
           builds = ', '.join(element['name'] for element in json.loads(os.environ['MATRIX']))
+          timestamp = dt.datetime.now(tz=dt.timezone.utc).strftime('%Y.%m.%d.%H%M%S')
           notes = ['PyInstaller']
           if re.fullmatch(r'v\d+\.\d+\.\d+', tag):
               notes.append(f'[{tag}](https://github.com/pyinstaller/pyinstaller/releases/tag/{tag})')
