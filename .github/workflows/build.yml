@@ -5,7 +5,7 @@ on:
       ref:
         description: PyInstaller tag/ref
         required: true
-        default: v6.17.0
+        default: 3f596f66feebe3a7d247248f95f76c071d08b832  # v6.17.0
         type: string
       x64:
         description: Build Windows x64 / win_amd64
@@ -20,28 +20,19 @@ on:
         default: true
         type: boolean
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   prepare:
     name: Prepare
     runs-on: ubuntu-latest
     outputs:
-      head_sha: ${{ steps.get_target.outputs.head_sha }}
       matrix: ${{ steps.build_matrix.outputs.matrix }}
       release_title: ${{ steps.release_info.outputs.release_title }}
       release_tag: ${{ steps.release_info.outputs.release_tag }}
       release_notes: ${{ steps.release_info.outputs.release_notes }}
 
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Get target commitish
-        id: get_target
-        run: |
-          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Build matrix
         id: build_matrix
         env:
@@ -84,31 +75,79 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'matrix={json.dumps(matrix)}')
 
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          fetch-depth: 0  # Needed for git-describe
+          repository: pyinstaller/pyinstaller
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Git describe
+        id: git_describe
+        shell: bash
+        run: |
+          git describe --tags  # So the script will exit on error
+          echo "tag=$(git describe --tags)" >> "${GITHUB_OUTPUT}"
+
       - name: Generate release info
         id: release_info
         env:
           REF: ${{ inputs.ref }}
+          TAG: ${{ steps.git_describe.outputs.tag }}
           MATRIX: ${{ steps.build_matrix.outputs.matrix }}
         shell: python
         run: |
           import datetime as dt
           import json
           import os
+          import re
           ref = os.environ['REF']
+          tag = os.environ['TAG']
           builds = ', '.join(element['name'] for element in json.loads(os.environ['MATRIX']))
           timestamp = dt.datetime.now(tz=dt.timezone.utc).strftime('%Y.%m.%d.%H%M%S')
+          notes = ['PyInstaller']
+          if re.fullmatch(r'v\d+\.\d+\.\d+', tag):
+              notes.append(f'[{tag}](https://github.com/pyinstaller/pyinstaller/releases/tag/{tag})')
+          else:
+              notes.append(tag)
+          notes.append(f'builds for Windows {builds}')
+          if ref != tag:
+              if re.fullmatch(r'[\da-f]+', ref):
+                  notes.append(f'(from https://github.com/pyinstaller/pyinstaller/commit/{ref})')
+              else:
+                  notes.append('from {ref}')
           outputs = {
-            'release_title': f'{ref} @ {timestamp}',
+            'release_title': f'{tag} @ {timestamp}',
             'release_tag': timestamp,
-            'release_notes': f'PyInstaller {ref} builds for Windows {builds}',
+            'release_notes': ' '.join(notes),
           }
           print(json.dumps(outputs, indent=2))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write('\n'.join(f'{key}={value}' for key, value in outputs.items()))
 
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v6.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Build source distribution
+        run: |
+          python -m pip install -U build hatchling
+          python -m build --no-isolation --sdist --outdir=dist .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        with:
+          name: pyinstaller-${{ inputs.ref }}-sdist
+          path: |
+            dist/*
+          compression-level: 0
+
   build:
     name: Build ${{ matrix.name }} package
-    needs: prepare
+    needs: [prepare]
+    permissions:
+      contents: read
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -120,7 +159,7 @@ jobs:
 
     steps:
       - name: Set up MinGW
-        uses: yt-dlp/setup-msys2@v2
+        uses: yt-dlp/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda  # v2.30.0
         with:
           update: true
           msystem: ${{ matrix.sys }}
@@ -131,10 +170,11 @@ jobs:
             mingw-w64-${{ matrix.env }}-python-pip
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           repository: pyinstaller/pyinstaller
           ref: ${{ inputs.ref }}
+          persist-credentials: false
 
       - name: Build bootloader
         env:
@@ -144,7 +184,7 @@ jobs:
           cd bootloader
           python ./waf --target-arch="${ARCH}" --"${COMPILER}" distclean all
 
-      - name: Build package
+      - name: Build wheel
         env:
           PYI_WHEEL_TAG: ${{ matrix.wheel_tag }}
           PYI_PLATFORM: ${{ matrix.platform }}
@@ -153,7 +193,7 @@ jobs:
           python -m build --no-isolation --wheel --outdir=dist .
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
         with:
           name: pyinstaller-${{ inputs.ref }}-${{ matrix.name }}
           path: |
@@ -164,23 +204,22 @@ jobs:
     name: Release
     needs: [prepare, build]
     permissions:
-      contents: write
+      contents: write  # Needed by gh to publish release to Github
     runs-on: ubuntu-latest
     env:
-      HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
       RELEASE_TITLE: ${{ needs.prepare.outputs.release_title }}
       RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
       RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
-          fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
         with:
           path: artifact
-          pattern: pyinstaller-*
+          pattern: pyinstaller-${{ inputs.ref }}-*
           merge-multiple: true
 
       - name: Publish release
@@ -189,7 +228,6 @@ jobs:
         run: |
           gh release create \
             --notes "${RELEASE_NOTES}" \
-            --target "${HEAD_SHA}" \
             --title "${RELEASE_TITLE}" \
             "${RELEASE_TAG}" \
             artifact/*
