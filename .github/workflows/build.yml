@@ -158,7 +158,7 @@ jobs:
 
     steps:
       - name: Set up MinGW
-        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda  # v2.30.0
+        uses: msys2/setup-msys2@cafece8e6baf9247cf9b1bf95097b0b983cc558d  # v2.31.0
         with:
           update: true
           msystem: ${{ matrix.sys }}
