@@ -21,6 +21,9 @@ on:
 
 permissions: {}
 
+env:
+  GH_TELEMETRY: "false"
+
 jobs:
   prepare:
     name: Prepare
