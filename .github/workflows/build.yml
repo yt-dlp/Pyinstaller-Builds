@@ -2,8 +2,8 @@ name: Build
 on:
   workflow_dispatch:
     inputs:
-      ref:
-        description: PyInstaller tag/ref
+      commitish:
+        description: PyInstaller tag/SHA
         required: true
         type: string
       x64:
@@ -79,7 +79,7 @@ jobs:
         with:
           fetch-depth: 0  # Needed for git-describe
           repository: pyinstaller/pyinstaller
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.commitish }}
           persist-credentials: false
 
       - name: Git describe
@@ -92,7 +92,7 @@ jobs:
       - name: Generate release info
         id: release_info
         env:
-          REF: ${{ inputs.ref }}
+          COMMITISH: ${{ inputs.commitish }}
           TAG: ${{ steps.git_describe.outputs.tag }}
           MATRIX: ${{ steps.build_matrix.outputs.matrix }}
         shell: python
@@ -101,7 +101,7 @@ jobs:
           import json
           import os
           import re
-          ref = os.environ['REF']
+          commitish = os.environ['COMMITISH']
           tag = os.environ['TAG']
           builds = ', '.join(element['name'] for element in json.loads(os.environ['MATRIX']))
           timestamp = dt.datetime.now(tz=dt.timezone.utc).strftime('%Y.%m.%d.%H%M%S')
@@ -111,11 +111,11 @@ jobs:
           else:
               notes.append(tag)
           notes.append(f'builds for Windows {builds}')
-          if ref != tag:
-              if re.fullmatch(r'[\da-f]+', ref):
-                  notes.append(f'(from https://github.com/pyinstaller/pyinstaller/commit/{ref})')
+          if commitish != tag:
+              if re.fullmatch(r'[\da-f]+', commitish):
+                  notes.append(f'(from https://github.com/pyinstaller/pyinstaller/commit/{commitish})')
               else:
-                  notes.append('from {ref}')
+                  notes.append('from {commitish}')
           outputs = {
             'release_title': f'{tag} @ {timestamp}',
             'release_tag': timestamp,
@@ -137,7 +137,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
-          name: pyinstaller-${{ inputs.ref }}-sdist
+          name: pyinstaller-${{ inputs.commitish }}-sdist
           path: |
             dist/*
           compression-level: 0
@@ -172,7 +172,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: pyinstaller/pyinstaller
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.commitish }}
           persist-credentials: false
 
       - name: Build bootloader
@@ -194,7 +194,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
-          name: pyinstaller-${{ inputs.ref }}-${{ matrix.name }}
+          name: pyinstaller-${{ inputs.commitish }}-${{ matrix.name }}
           path: |
             dist/*
           compression-level: 0
@@ -218,7 +218,7 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           path: artifact
-          pattern: pyinstaller-${{ inputs.ref }}-*
+          pattern: pyinstaller-${{ inputs.commitish }}-*
           merge-multiple: true
 
       - name: Publish release
