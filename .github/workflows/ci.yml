@@ -1,15 +1,9 @@
-name: Lint and audit
+name: CI
 on:
   push:
-    branches: [master]
-    paths:
-      - .github/*.yml
-      - .github/workflows/*
+    branches: ['main']
   pull_request:
-    branches: [master]
-    paths:
-      - .github/*.yml
-      - .github/workflows/*
+    branches: ['**']
 
 permissions: {}
 
