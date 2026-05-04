@@ -132,9 +132,13 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -U --require-hashes -r "requirements/pip.txt"
+          python -m pip install -U --require-hashes -r "requirements/build.txt"
+
       - name: Build source distribution
         run: |
-          python -m pip install -U build hatchling
           python -m build --no-isolation --sdist --outdir=dist .
 
       - name: Upload artifacts
@@ -186,12 +190,19 @@ jobs:
           cd bootloader
           python ./waf --target-arch="${ARCH}" --"${COMPILER}" distclean all
 
+      - name: Install Python dependencies
+        run: |
+          python -m venv --clear venv
+          source venv/bin/activate
+          python -m pip install -U --require-hashes -r "requirements/pip.txt"
+          python -m pip install -U --require-hashes -r "requirements/build.txt"
+
       - name: Build wheel
         env:
           PYI_WHEEL_TAG: ${{ matrix.wheel_tag }}
           PYI_PLATFORM: ${{ matrix.platform }}
         run: |
-          python -m pip install -U build hatchling
+          source venv/bin/activate
           python -m build --no-isolation --wheel --outdir=dist .
 
       - name: Upload artifacts

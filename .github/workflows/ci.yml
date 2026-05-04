@@ -34,6 +34,11 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -U --require-hashes -r "requirements/pip.txt"
+          python -m pip install -U --require-hashes -r "requirements/pyflakes.txt"
+
       - name: Install requirements
         env:
           GH_TOKEN: ${{ github.token }}
@@ -41,7 +46,6 @@ jobs:
         shell: bash
         run: |
           sudo apt -y install shellcheck
-          python -m pip install -U pyflakes
           gh release download \
             --repo "${ACTIONLINT_REPO}" \
             --pattern "${ACTIONLINT_TARBALL}" \
