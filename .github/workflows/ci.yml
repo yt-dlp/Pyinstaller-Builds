@@ -2,6 +2,7 @@ name: CI
 on:
   push:
     branches: ['master']
+  # This workflow contains required checks and needs to run for EVERY pull_request
   pull_request:
     branches: ['**']
 
@@ -19,6 +20,7 @@ env:
 
 jobs:
   actionlint:
+    # Required check; do not change name
     name: actionlint
     permissions:
       contents: read
@@ -50,11 +52,13 @@ jobs:
           printf '%s  %s' "${ACTIONLINT_SHA256SUM}" "${ACTIONLINT_TARBALL}" | sha256sum -c -
           tar xvzf "${ACTIONLINT_TARBALL}" actionlint
           sudo install -D --mode=755 actionlint /usr/bin/
+
       - name: Run actionlint
         run: |
           actionlint -color
 
   zizmor:
+    # Required check; do not change name
     name: zizmor
     permissions:
       contents: read
@@ -64,6 +68,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
+
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@71321a20a9ded102f6e9ce5718a2fcec2c4f70d8  # v0.5.2
         with:
