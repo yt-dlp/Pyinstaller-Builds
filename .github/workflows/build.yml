@@ -152,7 +152,7 @@ jobs:
         run: |
           cd pyinstaller
           source venv/bin/activate
-          python -m build -vvv --no-isolation --sdist --outdir=dist .
+          python -m build --no-isolation --sdist --outdir=dist .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
@@ -225,7 +225,7 @@ jobs:
         run: |
           cd pyinstaller
           source venv/bin/activate
-          python -m build -vvv --no-isolation --wheel --outdir=dist .
+          python -m build --no-isolation --wheel --outdir=dist .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
