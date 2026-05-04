@@ -77,18 +77,26 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'matrix={json.dumps(matrix)}')
 
-      - name: Checkout
+      - name: Checkout Pyinstaller-Builds
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          path: builds
+          persist-credentials: false
+
+      - name: Checkout PyInstaller
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           fetch-depth: 0  # Needed for git-describe
           repository: pyinstaller/pyinstaller
           ref: ${{ inputs.commitish }}
+          path: pyinstaller
           persist-credentials: false
 
       - name: Git describe
         id: git_describe
         shell: bash
         run: |
+          cd pyinstaller
           git describe --tags  # So the script will exit on error
           echo "tag=$(git describe --tags)" >> "${GITHUB_OUTPUT}"
 
@@ -134,11 +142,16 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python -m pip install -U --require-hashes -r "requirements/pip.txt"
-          python -m pip install -U --require-hashes -r "requirements/build.txt"
+          cd pyinstaller
+          python -m venv --clear venv
+          source venv/bin/activate
+          python -m pip install -U --require-hashes -r "../builds/requirements/pip.txt"
+          python -m pip install -U --require-hashes -r "../builds/requirements/build.txt"
 
       - name: Build source distribution
         run: |
+          cd pyinstaller
+          source venv/bin/activate
           python -m build --no-isolation --sdist --outdir=dist .
 
       - name: Upload artifacts
@@ -146,7 +159,7 @@ jobs:
         with:
           name: pyinstaller-${{ inputs.commitish }}-sdist
           path: |
-            dist/*
+            pyinstaller/dist/*
           compression-level: 0
 
   build:
@@ -175,11 +188,18 @@ jobs:
             mingw-w64-${{ matrix.env }}-python
             mingw-w64-${{ matrix.env }}-python-pip
 
-      - name: Checkout
+      - name: Checkout Pyinstaller-Builds
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          path: builds
+          persist-credentials: false
+
+      - name: Checkout PyInstaller
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: pyinstaller/pyinstaller
           ref: ${{ inputs.commitish }}
+          path: pyinstaller
           persist-credentials: false
 
       - name: Build bootloader
@@ -187,21 +207,23 @@ jobs:
           ARCH: ${{ matrix.arch }}
           COMPILER: ${{ matrix.compiler }}
         run: |
-          cd bootloader
+          cd pyinstaller/bootloader
           python ./waf --target-arch="${ARCH}" --"${COMPILER}" distclean all
 
       - name: Install Python dependencies
         run: |
+          cd pyinstaller
           python -m venv --clear venv
           source venv/bin/activate
-          python -m pip install -U --require-hashes -r "requirements/pip.txt"
-          python -m pip install -U --require-hashes -r "requirements/build.txt"
+          python -m pip install -U --require-hashes -r "../builds/requirements/pip.txt"
+          python -m pip install -U --require-hashes -r "../builds/requirements/build.txt"
 
       - name: Build wheel
         env:
           PYI_WHEEL_TAG: ${{ matrix.wheel_tag }}
           PYI_PLATFORM: ${{ matrix.platform }}
         run: |
+          cd pyinstaller
           source venv/bin/activate
           python -m build --no-isolation --wheel --outdir=dist .
 
@@ -210,7 +232,7 @@ jobs:
         with:
           name: pyinstaller-${{ inputs.commitish }}-${{ matrix.name }}
           path: |
-            dist/*
+            pyinstaller/dist/*
           compression-level: 0
 
   release:
