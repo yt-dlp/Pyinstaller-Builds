@@ -78,13 +78,13 @@ jobs:
               f.write(f'matrix={json.dumps(matrix)}')
 
       - name: Checkout Pyinstaller-Builds
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           path: builds
           persist-credentials: false
 
       - name: Checkout PyInstaller
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           fetch-depth: 0  # Needed for git-describe
           repository: pyinstaller/pyinstaller
@@ -189,13 +189,13 @@ jobs:
             mingw-w64-${{ matrix.env }}-python-pip
 
       - name: Checkout Pyinstaller-Builds
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           path: builds
           persist-credentials: false
 
       - name: Checkout PyInstaller
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           repository: pyinstaller/pyinstaller
           ref: ${{ inputs.commitish }}
@@ -247,7 +247,7 @@ jobs:
       RELEASE_NOTES: ${{ needs.prepare.outputs.release_notes }}
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           persist-credentials: false
 
