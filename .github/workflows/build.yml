@@ -186,7 +186,6 @@ jobs:
             base-devel
             mingw-w64-${{ matrix.env }}-toolchain
             mingw-w64-${{ matrix.env }}-python
-            mingw-w64-${{ matrix.env }}-python-pip
 
       - name: Checkout Pyinstaller-Builds
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -215,6 +214,7 @@ jobs:
           cd pyinstaller
           python -m venv --clear venv
           source venv/bin/activate
+          python -m ensurepip
           python -m pip install -U --require-hashes -r "../builds/requirements/pip.txt"
           python -m pip install -U --require-hashes -r "../builds/requirements/build.txt"
 
